@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Roads</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.0/jquery.min.js" integrity="sha256-xNzN2a4ltkB44Mc/Jz3pT4iU1cmeR0FkXs4pru/JxaQ=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+    <script src="resources/leaflet.ajax.js"></script>
+
+    <style>
+        #header{
+            height: 75px;
+            background-color: darkgoldenrod;
+        }
+        #mapdiv{
+            height: 650px;
+            background-color: aqua;
+        }
+        #sie_panel{
+            height: 650px;
+            background-color: bisque;
+        }
+        #footer{
+            height: 75px;
+            background-color: aliceblue;
+        }
+        .info.legend {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 13px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+            line-height: 1.4em;
+        }
+
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-align: left;
+        }
+
+        .modal {
+            z-index: 1000;
+            width: 100%;
+            height: 100%;
+            display: none;
+            background-color: rgba(0,0,0,0.3);
+        }
+
+        .model-content {
+            padding: 20px;
+            background-color: tan;
+            margin-top: 10%;
+        }
+    </style>
+</head>
+<body>
+    
+
+    <div id="header" class="col-md-12">
+        <h1 class="text-center">Scenic roads</h1>
+    </div>
+    
+
+    <div id="side_panel" class="col-md-3">
+        <h1 class="text-center">Points</h1>
+        <button class="form-control btn-primary">Most Shaded</button>
+            <input type="text" id="input"><br>
+            <button id="submit" value="submit">Submit</button>
+            <hr>
+            <div id="result">
+                <table id="roadsTable" class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>TreeCount</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+    </div>
+    <div id="mapdiv" class="col-md-9"></div>
+    <div id="footer" class="col-md-12">
+        <h4 id="map_coords" class="text-center">Latitude:19.4 Longitude: 83.2 Zoom Level:11</h4>
+        <h4 class="text-center">&copy;2025</h4>
+    </div>
+
+    <div id="edit" class="modal">
+        <div class="modal-content col-md-7 col-md-offset-2 row-md-offset-5">
+            <div class="col-md-12">
+                <label id="id-label"></label>
+            </div>
+            <br>
+            <!-- <div class="form-group row">
+                <div class="col-sm-6">
+                    <input type="text" class="form-control" id="tree_count" placeholder="Tree Count">
+                </div>
+                <div class="col-sm-2">
+                    <span id="idDisplay" class="pull-right"></span>
+                </div>
+            </div> -->
+            <div class="form-group row">
+                <div class="col-sm-4">
+                    <label>Tree Count</label>
+                </div>
+                <div class="col-sm-6">
+                    <input type="text" class="form-control" id="tree_count" placeholder="Enter Number of Trees">
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col-sm-4">
+                    <label>Scenic Rating</label>
+                </div>
+                <div class="col-sm-6">
+                    <select id='rating' class="form-control">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                    </select>
+                </div>
+                
+            </div>
+
+            <button id="btnSave" class="btn btn-success">Save</button>
+            <button id="btnCancel" class="btn btn-danger">Cancel</button>
+        </div>
+
+    </div>
+    
+</body>
+<script>
+    var geojsonLayer
+
+    var map = L.map('mapdiv')
+    map.setView([17.7,83.3],12);
+
+    var basemap = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png");
+    map.addLayer(basemap);
+
+    const legend = L.control({ position: 'bottomright' });
+
+    function editRoad(id){
+        $('#edit').show()
+        $.ajax({
+            url:'editRoads.php',
+            type:'POST',
+            data:{id:id},
+            success:function(response){
+                console.log(response)
+                objRoad = JSON.parse(response);
+                var c = objRoad.tree_count
+                console.log(c)
+                $('#id-label').html(id)
+                $('#tree_count').val(c)
+            }
+        })
+    }
+
+    $('#btnSave').click(function(){
+        $.ajax({
+            url:'updateRoads.php',
+            type:'POST',
+            data:{
+                id:$('#id-label').html(),
+                tree_count:$('#tree_count').val(),
+                scenic_rating:$('#rating').val()
+            },
+            success:function(response){
+                $('#edit').hide()
+            }
+        })
+    })
+
+    $('#btnCancel').click(function(){
+        $('#edit').hide()
+    })
+
+    $('#submit').click(function(){
+        $.ajax({
+            url:'query.php',
+            type:'POST',
+            data:{input:$('#input').val()},
+            success:function(response){
+                const data = JSON.parse(response);
+                
+                const tbody = $("#roadsTable tbody");
+                tbody.empty();
+                data.tableData.forEach(row => {
+                    let tr = $("<tr>");
+                    for (let key in row) {
+                        tr.append($("<td>").text(row[key]));
+                    }
+                    tbody.append(tr);
+                });
+
+                const values = data.geojson.features.map(f => f.properties.tree_count);
+                const min = Math.min(...values);
+                const max = Math.max(...values);
+
+                function getGradientColor(value) {
+                    const ratio = (value - min) / (max - min); // Normalize between 0 and 1
+                    const hue = ratio * 120; // 0 (red) to 120 (green)
+                    return `hsl(${hue}, 100%, 50%)`;
+                }
+
+                function style(feature) {
+                    return {
+                        color: getGradientColor(feature.properties.tree_count),
+                        weight: 4,
+                        opacity: 0.9
+                    };
+                }
+
+
+                if(geojsonLayer){
+                    console.log('found ya')
+                    map.removeLayer(geojsonLayer)
+                }
+
+                function buildPopup(feature, layer){
+                    const props = feature.properties;
+                    let popupContent = '<p style="font-size:12pt">This road has <strong>'+feature.properties.tree_count+'</strong> trees</p>'
+                    popupContent+='<br><button id="btnEdit" class="btn btn-primary center-block" onclick="editRoad('+feature.properties.id+')">Edit</button>'; 
+                    layer.bindPopup(popupContent)
+                }
+
+                geojsonLayer = L.geoJSON(data.geojson,{style: style,onEachFeature:buildPopup});
+                geojsonLayer.addTo(map); // Assuming `map` is your Leaflet map instance
+
+                map.fitBounds(geojsonLayer.getBounds());
+
+                if (legend) {
+                    map.removeControl(legend);
+                }
+
+                legend.onAdd = function (map) {
+                    const div = L.DomUtil.create('div', 'info legend');
+                    const grades = 6;
+                    const step = (max - min) / grades;
+
+                    // Title
+                    div.innerHTML += `<div class="legend-title">Number of Trees</div>`;
+
+                    // Color boxes
+                    for (let i = 0; i <= grades; i++) {
+                        const value = min + step * i;
+                        console.log(value,step)
+                        const hue = ((value - min) / (max - min)) * 120;
+                        const color = `hsl(${hue}, 100%, 50%)`;
+
+                        if(value.toFixed(0)<20){
+                            div.innerHTML +=
+                            `<i style="background:${color}; width:18px; height:18px; display:inline-block; margin-right:8px;"></i> ${value.toFixed(0)}- ${(value+step).toFixed(0)}<br>`;
+                        }
+                        else{
+                            div.innerHTML +=
+                            `<i style="background:${color}; width:18px; height:18px; display:inline-block; margin-right:8px;"></i> ${value.toFixed(0)}<br`;
+                        }
+                    }
+
+                    return div;
+                };
+
+                legend.addTo(map);
+                
+            }
+        })
+    })
+
+    
+
+
+    //var roadLayer = new L.GeoJSON.AJAX('data/seethammadara_roads.geojson').addTo(map)
+    
+    map.on("mousemove",function(e){
+        var str = "Latitude: "+e.latlng.lat.toFixed(5)+" Longitude: "+e.latlng.lng.toFixed(5)+" Zoom: "+map.getZoom();
+        $("#map_coords").html(str); 
+    });
+
+</script>
+</html>
